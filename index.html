@@ -6,131 +6,148 @@
 <title>模拟嘉豪</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{
-  background:#000;
-  overflow:hidden;
-  height:100vh;
-}
-canvas{
-  display:block;
-  width:100vw;
-  height:100vh;
-}
-/* 隐藏音频控件 */
-audio{
-  display:none;
-}
+body{background:#000;overflow:hidden;height:100vh;}
+canvas{display:block;width:100vw;height:100vh;}
+audio{display:none;}
 </style>
 </head>
 <body>
 <canvas id="matrix"></canvas>
-
-<!-- 本地音频 Iludeke.mp3，和html同目录 -->
 <audio id="bgMusic" loop>
   <source src="Iludeke.mp3" type="audio/mpeg">
+</audio>
 
 <script>
-// 二进制雨 + 股票形态音频可视化
 const canvas = document.getElementById('matrix');
 const ctx = canvas.getContext('2d');
 const audio = document.getElementById('bgMusic');
 
-// 画布自适应
 function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 resize();
-window.addEventListener('resize',resize);
 
-// 1. 数字雨配置
-const chars = '01';
+// ── 数字雨 ──
 const fontSize = 16;
 let columns = Math.floor(canvas.width / fontSize);
 let drops = Array(columns).fill(1);
 
-// 2. 音频可视化配置（股票K线柱状）
-let audioCtx, analyser, dataArray;
-const barCount = 45; // 股票柱子数量
-let barWidth = canvas.width / barCount - 2;
-const barCenterY = canvas.height - 80; // K线中心基准线
-const maxBarHeight = 300; // 最大高度
+// ── 股票滚动参数 ──
+const barW = 10;       // 每根柱子宽度（含间距）
+const barGap = 2;
+const barSlotW = barW + barGap;
+const barCenterY = () => canvas.height - 100;
+const maxBarH = 260;
 
-// 点击初始化音频
-document.addEventListener('click', ()=>{
-  audio.play().catch(e=>console.log("播放失败：",e));
-  // 音频上下文
+// 历史队列：每个元素是一帧的"单一代表频率值" 0-255
+let barHistory = [];
+
+// 控制新柱子插入速度（不必每帧都插，否则太密）
+let frameCount = 0;
+const insertEvery = 3; // 每3帧插入一根新柱
+
+// ── 音频 ──
+let audioCtx, analyser, dataArray;
+
+document.addEventListener('click', () => {
+  audio.play().catch(e => console.log('播放失败：', e));
   if(!audioCtx){
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
     const source = audioCtx.createMediaElementSource(audio);
     source.connect(analyser);
     analyser.connect(audioCtx.destination);
-    analyser.fftSize = 256;
-    const bufferLength = analyser.frequencyBinCount;
-    dataArray = new Uint8Array(bufferLength);
+    analyser.fftSize = 128;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
   }
-},{once:true}); 
+}, { once: true });
 
-// 主渲染循环
+// ── 主循环 ──
 function draw(){
-  // ---------- 绘制数字雨 ----------
+  // 数字雨背景
   ctx.fillStyle = 'rgba(0,0,0,0.05)';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#0f0';
-  ctx.font = fontSize+'px monospace';
-
-  for(let i=0;i<columns;i++){
-    const text = chars[Math.floor(Math.random()*chars.length)];
-    ctx.fillText(text,i*fontSize,drops[i]*fontSize);
-    if(drops[i]*fontSize>canvas.height && Math.random()>0.97){
-      drops[i]=0;
-    }
+  ctx.font = fontSize + 'px monospace';
+  for(let i = 0; i < columns; i++){
+    ctx.fillText(
+      Math.random() > 0.5 ? '1' : '0',
+      i * fontSize,
+      drops[i] * fontSize
+    );
+    if(drops[i] * fontSize > canvas.height && Math.random() > 0.97) drops[i] = 0;
     drops[i]++;
   }
 
-  // ---------- 绘制股票形态音频条：红上绿下 ----------
-  if(analyser){
+  // ── 股票滚动 ──
+  const centerY = barCenterY();
+  const maxSlots = Math.floor(canvas.width / barSlotW) + 2; // 屏幕最多容纳根数
+
+  frameCount++;
+  if(frameCount % insertEvery === 0 && analyser){
     analyser.getByteFrequencyData(dataArray);
-    const step = Math.floor(dataArray.length / barCount);
 
-    for(let i=0;i<barCount;i++){
-      const val = dataArray[i*step] || 0;
-      const h = (val / 255) * maxBarHeight;
-      const x = i*(barWidth+2);
+    // 取低频段平均值作为这根柱子的高度代表
+    const slice = Math.floor(dataArray.length / 4);
+    let sum = 0;
+    for(let i = 0; i < slice; i++) sum += dataArray[i];
+    const avg = sum / slice;
 
-      // 红柱：向上涨；绿柱：向下跌
-      if(h > maxBarHeight/2){
-        // 上涨红色K线，向上
-        ctx.fillStyle = "#ff3333";
-        const y = barCenterY - h;
-        ctx.fillRect(x, y, barWidth, h);
-        // 上影线
-        ctx.fillRect(x+barWidth/2-1, y-4, 2, 4);
-      }else{
-        // 下跌绿色K线，向下
-        ctx.fillStyle = "#00dd66";
-        const y = barCenterY;
-        ctx.fillRect(x, y, barWidth, h);
-        // 下影线
-        ctx.fillRect(x+barWidth/2-1, y+h, 2, 4);
-      }
-      // 中间基准线小横线
-      ctx.fillStyle = '#aaa';
-      ctx.fillRect(x+barWidth/2-2, barCenterY, 4, 2);
+    barHistory.push(avg); // 新柱入队（右侧）
+    if(barHistory.length > maxSlots) barHistory.shift(); // 左侧淘汰
+  }
+
+  // 绘制所有历史柱（从左到右，最新的在最右）
+  // 为了让"最新柱"永远贴右边，我们从右往左布局
+  const startX = canvas.width - barSlotW; // 最新柱的 x 起点
+
+  for(let i = 0; i < barHistory.length; i++){
+    const val = barHistory[barHistory.length - 1 - i]; // 最新=i=0，贴右
+    const x = startX - i * barSlotW;
+    if(x + barW < 0) break; // 超出左侧不画
+
+    const h = (val / 255) * maxBarH;
+    const half = maxBarH / 2;
+
+    if(val > 128){
+      // 上涨：红柱，向上生长
+      const barH = h - half;
+      ctx.fillStyle = '#ff3333';
+      ctx.fillRect(x, centerY - barH, barW, barH);
+      // 上影线
+      ctx.fillStyle = '#ff6666';
+      ctx.fillRect(x + barW/2 - 1, centerY - barH - 5, 2, 5);
+    } else {
+      // 下跌：绿柱，向下生长
+      const barH = half - h;
+      ctx.fillStyle = '#00dd66';
+      ctx.fillRect(x, centerY, barW, barH);
+      // 下影线
+      ctx.fillStyle = '#66ffaa';
+      ctx.fillRect(x + barW/2 - 1, centerY + barH, 2, 5);
     }
   }
+
+  // 基准线
+  ctx.strokeStyle = 'rgba(180,180,180,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(canvas.width, centerY);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   requestAnimationFrame(draw);
 }
 draw();
 
-// 窗口大小变化重置
-window.addEventListener('resize',()=>{
+window.addEventListener('resize', () => {
   resize();
   columns = Math.floor(canvas.width / fontSize);
   drops = Array(columns).fill(1);
-  barWidth = canvas.width / barCount - 2;
+  barHistory = [];
 });
 </script>
 </body>
