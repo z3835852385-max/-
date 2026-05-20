@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二进制数字雨+背景音乐</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#000;
+  overflow:hidden;
+  height:100vh;
+}
+canvas{
+  display:block;
+  width:100vw;
+  height:100vh;
+}
+/* 隐藏音频控件 */
+audio{
+  display:none;
+}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+
+<audio id="bgMusic" loop>
+  <source src="Iludeke.mp3" type="audio/mpeg">
+
+
+<script>
+// 二进制雨
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+const audio = document.getElementById('bgMusic');
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize',resize);
+
+const chars = '01';
+const fontSize = 16;
+const columns = Math.floor(canvas.width / fontSize);
+const drops = Array(columns).fill(1);
+
+function draw(){
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#0f0';
+  ctx.font = fontSize+'px monospace';
+
+  for(let i=0;i<columns;i++){
+    const text = chars[Math.floor(Math.random()*chars.length)];
+    ctx.fillText(text,i*fontSize,drops[i]*fontSize);
+
+    if(drops[i]*fontSize>canvas.height && Math.random()>0.97){
+      drops[i]=0;
+    }
+    drops[i]++;
+  }
+}
+setInterval(draw,50);
+document.addEventListener('click', ()=>{
+  audio.play().catch(e=>console.log("播放失败：",e));
+},{once:true}); //
+</script>
+</body>
+</html>
