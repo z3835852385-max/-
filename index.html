@@ -16,7 +16,6 @@ canvas{
   width:100vw;
   height:100vh;
 }
-/* 隐藏音频控件 */
 audio{
   display:none;
 }
@@ -25,17 +24,15 @@ audio{
 <body>
 <canvas id="matrix"></canvas>
 
-<!-- 本地音频 Iludeke.mp3，和html同目录 -->
 <audio id="bgMusic" loop>
   <source src="Iludeke.mp3" type="audio/mpeg">
 
 <script>
-// 二进制雨 + 股票形态音频可视化
 const canvas = document.getElementById('matrix');
 const ctx = canvas.getContext('2d');
 const audio = document.getElementById('bgMusic');
 
-// 画布自适应
+// 画布适配
 function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -43,23 +40,26 @@ function resize(){
 resize();
 window.addEventListener('resize',resize);
 
-// 1. 数字雨配置
+// 1. 数字雨
 const chars = '01';
 const fontSize = 16;
 let columns = Math.floor(canvas.width / fontSize);
 let drops = Array(columns).fill(1);
 
-// 2. 音频可视化配置（股票K线柱状）
+// 2. 股票滚动K线配置
 let audioCtx, analyser, dataArray;
-const barCount = 45; // 股票柱子数量
-let barWidth = canvas.width / barCount - 2;
-const barCenterY = canvas.height - 80; // K线中心基准线
-const maxBarHeight = 300; // 最大高度
+// 存储所有K线数据，实现滚动
+let barList = [];
+const barWidth = 8;
+const barGap = 2;
+const barCenterY = canvas.height - 80;
+const maxBarHeight = 280;
+// 滚动速度
+const scrollSpeed = 1.2;
 
-// 点击初始化音频
+// 点击播放初始化音频
 document.addEventListener('click', ()=>{
   audio.play().catch(e=>console.log("播放失败：",e));
-  // 音频上下文
   if(!audioCtx){
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
@@ -72,9 +72,9 @@ document.addEventListener('click', ()=>{
   }
 },{once:true}); 
 
-// 主渲染循环
+// 主渲染
 function draw(){
-  // ---------- 绘制数字雨 ----------
+  // 绘制数字雨
   ctx.fillStyle = 'rgba(0,0,0,0.05)';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle = '#0f0';
@@ -89,48 +89,61 @@ function draw(){
     drops[i]++;
   }
 
-  // ---------- 绘制股票形态音频条：红上绿下 ----------
+  // 股票滚动K线
   if(analyser){
     analyser.getByteFrequencyData(dataArray);
-    const step = Math.floor(dataArray.length / barCount);
+    // 取平均音量作为当前K线高度
+    let avg = 0;
+    for(let v of dataArray) avg += v;
+    avg /= dataArray.length;
+    const h = (avg / 255) * maxBarHeight;
 
-    for(let i=0;i<barCount;i++){
-      const val = dataArray[i*step] || 0;
-      const h = (val / 255) * maxBarHeight;
-      const x = i*(barWidth+2);
+    // 新增一根K线，放到最右侧
+    barList.push({
+      x: canvas.width,
+      height: h,
+      isUp: h > maxBarHeight/2
+    });
 
-      // 红柱：向上涨；绿柱：向下跌
-      if(h > maxBarHeight/2){
-        // 上涨红色K线，向上
+    // 所有K线向左滚动
+    barList.forEach(bar=>{
+      bar.x -= scrollSpeed;
+    });
+
+    // 清除移出屏幕的K线
+    barList = barList.filter(b=>b.x > -barWidth);
+
+    // 绘制所有K线
+    barList.forEach(bar=>{
+      if(bar.isUp){
+        // 红柱向上
         ctx.fillStyle = "#ff3333";
-        const y = barCenterY - h;
-        ctx.fillRect(x, y, barWidth, h);
-        // 上影线
-        ctx.fillRect(x+barWidth/2-1, y-4, 2, 4);
+        const y = barCenterY - bar.height;
+        ctx.fillRect(bar.x, y, barWidth, bar.height);
+        ctx.fillRect(bar.x+barWidth/2-1, y-4, 2, 4);
       }else{
-        // 下跌绿色K线，向下
+        // 绿柱向下
         ctx.fillStyle = "#00dd66";
         const y = barCenterY;
-        ctx.fillRect(x, y, barWidth, h);
-        // 下影线
-        ctx.fillRect(x+barWidth/2-1, y+h, 2, 4);
+        ctx.fillRect(bar.x, y, barWidth, bar.height);
+        ctx.fillRect(bar.x+barWidth/2-1, y+bar.height, 2, 4);
       }
-      // 中间基准线小横线
+      // 基准线小刻度
       ctx.fillStyle = '#aaa';
-      ctx.fillRect(x+barWidth/2-2, barCenterY, 4, 2);
-    }
+      ctx.fillRect(bar.x+barWidth/2-2, barCenterY, 4, 2);
+    });
   }
 
   requestAnimationFrame(draw);
 }
 draw();
 
-// 窗口大小变化重置
+// 窗口变化重置
 window.addEventListener('resize',()=>{
   resize();
   columns = Math.floor(canvas.width / fontSize);
   drops = Array(columns).fill(1);
-  barWidth = canvas.width / barCount - 2;
+  barList = [];
 });
 </script>
 </body>
