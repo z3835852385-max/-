@@ -1,148 +1,227 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>模拟嘉豪</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;overflow:hidden;height:100vh;}
-canvas{display:block;width:100vw;height:100vh;}
-audio{display:none;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>既见君子，云胡不喜</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* Diagonal Container Setup */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* * The key to the dynamic diagonal split. 
+         * We split the flex container 50/50, but then use absolute positioning
+         * and negative margins on the panels to create the angled overlay.
+         */
+        .half {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+            text-decoration: none;
+        }
+
+        /* ================= 左半部分：极酷液态玻璃 ================= */
+        .left-side {
+            background: linear-gradient(135deg, #FF66A3 0%, #a1c4fd 60%, #1e3c72 100%);
+            /* Swirling liquid effect */
+            background-size: 400% 400%;
+            animation: supremeLiquid 8s ease-in-out infinite;
+            /* Creates the diagonal boundary */
+            transform: skewX(-20deg) translateX(-15%);
+            transform-origin: bottom left;
+            z-index: 2;
+            border-right: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+        }
+
+        /* Corrects skew for the content inside */
+        .left-side .content-wrapper {
+            transform: skewX(20deg) translateX(10%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @keyframes supremeLiquid {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .apple-btn-cool {
+            padding: 20px 60px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 60px;
+            cursor: pointer;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+            letter-spacing: 4px;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 20px rgba(161, 196, 253, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .left-side:hover .apple-btn-cool {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 0 10px 40px rgba(161, 196, 253, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+
+        /* ================= 右半部分：极酷赛博朋克 ================= */
+        .right-side {
+            background: #050507;
+            /* Gritty background texture simulation */
+            background-image: 
+                linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 127, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            /* The diagonal boundary again, unskewed to form the gap */
+            transform: skewX(-20deg) translateX(15%);
+            transform-origin: top right;
+            z-index: 1;
+        }
+
+        /* Intense RGB Neon Flow along the diagonal border */
+        .right-side::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(90deg, #00f0ff, #ff007f, #00f0ff);
+            background-size: 200% auto;
+            animation: neonFlow 3s linear infinite;
+            mask: linear-gradient(135deg, transparent 48%, black 50%);
+            -webkit-mask: linear-gradient(135deg, transparent 48%, black 50%);
+            opacity: 0.8;
+            filter: blur(2px);
+        }
+
+        .right-side .content-wrapper {
+            transform: skewX(20deg) translateX(-10%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 3; /* Keep content above the background effects */
+        }
+
+        @keyframes neonFlow {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .cyber-btn-extreme {
+            padding: 18px 55px;
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffffff;
+            background: #000;
+            border: 4px solid #ff007f;
+            border-radius: 0px; /* Sharp corners */
+            cursor: pointer;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f;
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.7), inset 0 0 15px rgba(255, 0, 127, 0.5);
+            transition: all 0.2s ease; /* Fast response for cyberpunk */
+            position: relative;
+        }
+
+        /* Cyberpunk Hover: Aggressive color shift and glitch shadow */
+        .right-side:hover .cyber-btn-extreme {
+            color: #00f0ff;
+            border-color: #00f0ff;
+            text-shadow: 0 0 15px #00f0ff, 0 0 30px #00f0ff;
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.9), inset 0 0 20px rgba(0, 240, 255, 0.4);
+            transform: scale(1.08) translateY(-3px) rotate(-1deg);
+        }
+
+        /* Fake glitch effect on hover */
+        .cyber-btn-extreme::after {
+            content: '豪情在天';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            color: #ff007f;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .right-side:hover .cyber-btn-extreme::after {
+            animation: cyberGlitch 0.4s steps(2) infinite;
+            opacity: 1;
+            border-color: #ff007f;
+        }
+
+        @keyframes cyberGlitch {
+            0% { transform: translate(2px, 2px); text-shadow: 2px 0 red; }
+            25% { transform: translate(-2px, -2px); text-shadow: -2px 0 blue; }
+            50% { transform: translate(2px, -2px); text-shadow: 1px 0 magenta; }
+            75% { transform: translate(-2px, 2px); text-shadow: -1px 0 cyan; }
+            100% { transform: translate(0); }
+        }
+
+        /* 响应式：手机端保留对角线感，变为交叠布局 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .left-side {
+                transform: skewY(-10deg) translateY(-10%);
+                border-right: none;
+                border-bottom: 4px solid rgba(255, 255, 255, 0.3);
+            }
+            .left-side .content-wrapper { transform: skewY(10deg) translateY(10%); }
+
+            .right-side {
+                transform: skewY(-10deg) translateY(10%);
+            }
+            .right-side .content-wrapper { transform: skewY(10deg) translateY(-10%); }
+            .right-side::before { mask: linear-gradient(180deg, transparent 48%, black 50%); }
+        }
+    </style>
 </head>
 <body>
-<canvas id="matrix"></canvas>
-<audio id="bgMusic" loop>
-  <source src="Iludeke.mp3" type="audio/mpeg">
-</audio>
 
-<script>
-const canvas = document.getElementById('matrix');
-const ctx = canvas.getContext('2d');
-const audio = document.getElementById('bgMusic');
+    <div class="container">
+        <a href="jiaxin.html" class="half left-side">
+            <div class="content-wrapper">
+                <button class="apple-btn-cool">欣之所向</button>
+            </div>
+        </a>
 
-function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resize();
+        <a href="jiahao.html" class="half right-side">
+            <div class="content-wrapper">
+                <button class="cyber-btn-extreme">豪情在天</button>
+            </div>
+        </a>
+    </div>
 
-// ── 数字雨 ──
-const fontSize = 16;
-let columns = Math.floor(canvas.width / fontSize);
-let drops = Array(columns).fill(1);
-
-// ── 股票滚动参数 ──
-const barW = 10;
-const barGap = 2;
-const barSlotW = barW + barGap;
-const barCenterY = () => canvas.height - 100;
-const maxBarH = 260;
-
-let barHistory = [];
-let frameCount = 0;
-const insertEvery = 3;
-
-// ── 音频 ──
-let audioCtx, analyser, dataArray;
-
-document.addEventListener('click', () => {
-  audio.play().catch(e => console.log('播放失败：', e));
-  if(!audioCtx){
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    const source = audioCtx.createMediaElementSource(audio);
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    analyser.fftSize = 128;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-  }
-}, { once: true });
-
-// ── 主循环 ──
-function draw(){
-  // 数字雨背景
-  ctx.fillStyle = 'rgba(0,0,0,0.05)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#0f0';
-  ctx.font = fontSize + 'px monospace';
-  for(let i = 0; i < columns; i++){
-    ctx.fillText(
-      Math.random() > 0.5 ? '1' : '0',
-      i * fontSize,
-      drops[i] * fontSize
-    );
-    if(drops[i] * fontSize > canvas.height && Math.random() > 0.97) drops[i] = 0;
-    drops[i]++;
-  }
-
-  // ── 股票滚动 ──
-  const centerY = barCenterY();
-  const maxSlots = Math.floor(canvas.width / barSlotW) + 2;
-
-  frameCount++;
-  if(frameCount % insertEvery === 0 && analyser){
-    analyser.getByteFrequencyData(dataArray);
-    const slice = Math.floor(dataArray.length / 4);
-    let sum = 0;
-    for(let i = 0; i < slice; i++) sum += dataArray[i];
-    const avg = sum / slice;
-
-    barHistory.push(avg);
-    if(barHistory.length > maxSlots) barHistory.shift();
-  }
-
-  // 动态基准线：高于均值→红柱向上，低于均值→绿柱向下
-  const avgVal = barHistory.length
-    ? barHistory.reduce((a, b) => a + b, 0) / barHistory.length
-    : 128;
-
-  const startX = canvas.width - barSlotW;
-
-  for(let i = 0; i < barHistory.length; i++){
-    const val = barHistory[barHistory.length - 1 - i];
-    const x = startX - i * barSlotW;
-    if(x + barW < 0) break;
-
-    const diff = val - avgVal;
-    const barH = Math.abs(diff) / (avgVal || 1) * maxBarH * 0.8 + 4;
-
-    if(diff >= 0){
-      // 高于均值 → 红柱向上
-      ctx.fillStyle = '#ff3333';
-      ctx.fillRect(x, centerY - barH, barW, barH);
-      ctx.fillStyle = '#ff6666';
-      ctx.fillRect(x + barW/2 - 1, centerY - barH - 5, 2, 5);
-    } else {
-      // 低于均值 → 绿柱向下
-      ctx.fillStyle = '#00dd66';
-      ctx.fillRect(x, centerY, barW, barH);
-      ctx.fillStyle = '#66ffaa';
-      ctx.fillRect(x + barW/2 - 1, centerY + barH, 2, 5);
-    }
-  }
-
-  // 基准线
-  ctx.strokeStyle = 'rgba(180,180,180,0.4)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 6]);
-  ctx.beginPath();
-  ctx.moveTo(0, centerY);
-  ctx.lineTo(canvas.width, centerY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  requestAnimationFrame(draw);
-}
-draw();
-
-window.addEventListener('resize', () => {
-  resize();
-  columns = Math.floor(canvas.width / fontSize);
-  drops = Array(columns).fill(1);
-  barHistory = [];
-});
-</script>
 </body>
 </html>
